@@ -1,5 +1,6 @@
 package com.k_nakamura.horiojapan.kousaku.saitama_u.fileexplorer;
 
+import android.content.Intent;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -23,7 +24,7 @@ public class MainActivity extends AppCompatActivity {
     private File[] files;
 
     private List<String> nowDirList = new ArrayList<String>();
-    private int nowDirNum = 1;
+    private int nowDirNum = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,13 +42,31 @@ public class MainActivity extends AppCompatActivity {
                     nowDirNum++;
                     nowDirTxtView.setText(getDirName());
                     setFiles2ListView();
-                } else {
+                } else if(files[position].getName().endsWith(".jpg")||files[position].getName().endsWith(".png")) {
+                    startShowImageIntent(item);
+                }
+                else{
                     showItem(item);
                 }
             }
         });
 
-        nowDirList.add(Environment.getExternalStorageDirectory().getPath());
+        String path = Environment.getExternalStorageDirectory().getPath();
+        String searchWord = "/";
+        int begin = 1;
+        int end;
+        while((end = path.indexOf(searchWord, begin)) > -1)
+        {
+            nowDirList.add(path.substring(begin,end));
+            begin = end + 1;
+            nowDirNum++;
+        }
+        if((begin = path.lastIndexOf(searchWord)) + 1 != path.length()) {
+            nowDirList.add(path.substring(begin+1));
+            nowDirNum++;
+        }
+
+        Toast.makeText(this, getDirName(), Toast.LENGTH_SHORT).show();
         nowDirTxtView.setText(getDirName());
 
         setFiles2ListView();
@@ -98,13 +117,20 @@ public class MainActivity extends AppCompatActivity {
 
     private String getDirName()
     {
-        String retStr = "";
+        String retStr = "/";
         for(int i = 0 ; i < nowDirNum ; i++)
         {
             retStr += nowDirList.get(i);
             retStr += "/";
         }
         return retStr;
+    }
+
+    private void startShowImageIntent(String item)
+    {
+        Intent intent = new Intent(getApplicationContext(),ShowImageActivity.class);
+        intent.putExtra("path",getDirName()+item);
+        startActivity(intent);
     }
 
     public boolean onKeyDown(int keyCode, KeyEvent event) {
@@ -132,6 +158,7 @@ public class MainActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+
             return true;
         }
 
