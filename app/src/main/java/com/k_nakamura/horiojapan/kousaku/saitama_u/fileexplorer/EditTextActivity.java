@@ -7,7 +7,7 @@ import android.view.MenuItem;
 import android.widget.EditText;
 
 import java.io.BufferedReader;
-import java.io.InputStream;
+import java.io.FileInputStream;
 import java.io.InputStreamReader;
 
 public class EditTextActivity extends AppCompatActivity {
@@ -17,14 +17,14 @@ public class EditTextActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_text);
 
-        InputStream is = null;
+        FileInputStream is = null;
         BufferedReader br = null;
         String text = "";
 
         try {
             try {
                 // assetsフォルダ内の sample.txt をオープンする
-                is = this.getAssets().open("sample.txt");
+                is = openFileInput("sample.txt");
                 br = new BufferedReader(new InputStreamReader(is));
 
                 // １行ずつ読み込み、改行を付加する
