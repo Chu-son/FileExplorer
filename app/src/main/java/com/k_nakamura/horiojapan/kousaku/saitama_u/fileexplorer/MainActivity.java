@@ -1,15 +1,20 @@
 package com.k_nakamura.horiojapan.kousaku.saitama_u.fileexplorer;
 
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Environment;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.ContextMenu;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -23,6 +28,10 @@ public class MainActivity extends AppCompatActivity {
     private TextView nowDirTxtView;
     private File[] files;
 
+    private String imageExtension[] = {".jpg",".png",".jpeg",".bmp"};
+    private String musicExtension[] = {".mp3",".wav",};
+    private String movieExtension[] = {".mp4",".avi"};
+
     private List<String> nowDirList = new ArrayList<String>();
     private int nowDirNum = 0;
 
@@ -32,6 +41,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         nowDirTxtView = (TextView)findViewById(R.id.nowDir);
         fileListView = (ListView) findViewById(R.id.fileList);
+
+        registerForContextMenu(fileListView);
+
         fileListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -42,8 +54,16 @@ public class MainActivity extends AppCompatActivity {
                     nowDirNum++;
                     nowDirTxtView.setText(getDirName());
                     setFiles2ListView();
-                } else if(files[position].getName().endsWith(".jpg")||files[position].getName().endsWith(".png")) {
+                } else if(isImage(files[position])) {
                     startShowImageIntent(item);
+                }
+                else if(isMusic(files[position]))
+                {
+                    sendMusicIntent(files[position]);
+                }
+                else if(isMovie(files[position]))
+                {
+                    sendMovieIntent(files[position]);
                 }
                 else{
                     showItem(item);
@@ -51,6 +71,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // パスを分解してStringの配列に格納
         String path = Environment.getExternalStorageDirectory().getPath();
         String searchWord = "/";
         int begin = 1;
@@ -72,6 +93,9 @@ public class MainActivity extends AppCompatActivity {
         setFiles2ListView();
     }
 
+    /*
+     *  現在のディレクトリ内のファイルとディレクトリを一覧にしてListViewにセット
+     */
     private void setFiles2ListView()
     {
         List<String> fileList = new ArrayList<String>();
@@ -81,7 +105,6 @@ public class MainActivity extends AppCompatActivity {
             int f = 0;
             int d = 0;
             for(int i = 0; i < files.length; i++){
-                //if(files[i].isFile() && files[i].getName().endsWith(".mp3")){
                 if(files[i].isFile()){
                     f++;
                 }else d++;
@@ -102,6 +125,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /*
+     *  １つ前のディレクトリに戻る
+     */
     private boolean backDir()
     {
         if(nowDirNum == 1) return false;
@@ -111,10 +137,16 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
+    /*
+     *  指定したアイテム名を絶対パスでトースト表示
+     */
     public void showItem(String str){
         Toast.makeText(this, getDirName() + str, Toast.LENGTH_SHORT).show();
     }
 
+    /*
+     *  現在のディレクトリの絶対パスを返す
+     */
     private String getDirName()
     {
         String retStr = "/";
@@ -126,6 +158,9 @@ public class MainActivity extends AppCompatActivity {
         return retStr;
     }
 
+    /*
+     *  画像表示のアクティビティを起動
+     */
     private void startShowImageIntent(String item)
     {
         Intent intent = new Intent(getApplicationContext(),ShowImageActivity.class);
@@ -133,6 +168,66 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+    /*
+     *  指定したファイルが指定した拡張子のどれかに該当するか判別
+     */
+    private boolean isExtension(File f ,String extension[])
+    {
+        for(String ext:extension)
+            if(f.getName().endsWith(ext))
+                return true;
+        for(String ext:extension)
+            if(f.getName().endsWith(ext.toUpperCase()))
+                return true;
+        return false;
+    }
+    /*
+     *  指定したファイルが画像なのかどうかを判別
+     */
+    private boolean isImage(File f)
+    {
+        return isExtension(f,imageExtension);
+    }
+    /*
+     *  指定したファイルが音楽なのかどうかを判別
+     */
+    private boolean isMusic(File f)
+    {
+        return isExtension(f,musicExtension);
+    }
+    /*
+     *  指定したファイルが動画なのかどうかを判別
+     */
+    private boolean isMovie(File f)
+    {
+        return isExtension(f,movieExtension);
+    }
+
+    /*
+     *  音楽を再生するためのインテントを発行
+     */
+    private void sendMusicIntent(File f)
+    {
+        Intent intent = new Intent();
+        intent.setAction(Intent.ACTION_VIEW);
+        intent.setDataAndType(Uri.fromFile(f),"audio/*");
+        startActivity(intent);
+    }
+    /*
+     *  動画を再生するためのインテントを発行
+     */
+    private void sendMovieIntent(File f)
+    {
+        Intent intent = new Intent();
+        intent.setAction(Intent.ACTION_VIEW);
+        intent.setDataAndType(Uri.fromFile(f),"video/*");
+        startActivity(intent);
+    }
+
+    /*
+     *  ボタンイベントを取得
+     *  　・バックボタンならひとつ前のディレクトリに戻る
+     */
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if(keyCode != KeyEvent.KEYCODE_BACK){
             return super.onKeyDown(keyCode, event);
@@ -142,13 +237,78 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /*
+     *  コンテキストメニュー作成
+     */
+    static final int CONTEXT_MENU_FILELISTVIEW_ITEM__ID_1 = 0x01;
+    static final int CONTEXT_MENU_FILELISTVIEW_ITEM__ID_2 = 0x02;
+    static final int CONTEXT_MENU_FILELISTVIEW_ITEM__RENAME = 0x03;
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+        super.onCreateContextMenu(menu, v, menuInfo);
+
+        int viewId = v.getId();
+
+        if(viewId == R.id.fileList)
+        {
+            menu.setHeaderTitle("めにゅー");
+            menu.add(0, CONTEXT_MENU_FILELISTVIEW_ITEM__ID_1, 0, "めにゅー１");
+            menu.add(0,CONTEXT_MENU_FILELISTVIEW_ITEM__ID_2,0,"めにゅー２");
+            menu.add(0,CONTEXT_MENU_FILELISTVIEW_ITEM__RENAME,0,"りねーむ");
+        }
+    }
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        switch (item.getItemId())
+        {
+            case CONTEXT_MENU_FILELISTVIEW_ITEM__ID_1:
+                Toast.makeText(this, "めにゅー１", Toast.LENGTH_SHORT).show();
+                return true;
+            case CONTEXT_MENU_FILELISTVIEW_ITEM__ID_2:
+                Toast.makeText(this, "めにゅー２", Toast.LENGTH_SHORT).show();
+                return true;
+            case CONTEXT_MENU_FILELISTVIEW_ITEM__RENAME:
+                renameDialog(files[0]);
+                Toast.makeText(this, "りねーむ", Toast.LENGTH_SHORT).show();
+                return true;
+            default:
+                return super.onContextItemSelected(item);
+        }
+    }
+
+    private void renameDialog(File file)
+    {
+        //テキスト入力を受け付けるビューを作成します。
+        final EditText editView = new EditText(MainActivity.this);
+        new AlertDialog.Builder(MainActivity.this)
+                .setIcon(android.R.drawable.ic_dialog_info)
+                .setTitle("テキスト入力ダイアログ")
+                        //setViewにてビューを設定します。
+                .setView(editView)
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                        //入力した文字をトースト出力する
+                        Toast.makeText(MainActivity.this,
+                                editView.getText().toString(),
+                                Toast.LENGTH_LONG).show();
+                    }
+                })
+                .setNegativeButton("キャンセル", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                    }
+                })
+                .show();
+    }
+
+    /*
+     *  オプションメニュー作成
+     */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
-
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
