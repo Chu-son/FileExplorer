@@ -1,20 +1,32 @@
 package com.k_nakamura.horiojapan.kousaku.saitama_u.fileexplorer;
 
+import android.app.Fragment;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
+import android.app.ListFragment;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Environment;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.GridView;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -25,26 +37,44 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private ListView fileListView;
+    private GridView gridview;
+    private ListView listview;
     private TextView nowDirTxtView;
     private File[] files;
 
-    private String imageExtension[] = {".jpg",".png",".jpeg",".bmp"};
+    private String imageExtension[] = {".jpg",".png",".jpeg",".gif",".bmp"};
     private String musicExtension[] = {".mp3",".wav",};
     private String movieExtension[] = {".mp4",".avi"};
 
     private List<String> nowDirList = new ArrayList<String>();
     private int nowDirNum = 0;
 
+    private MyListFragment fragment1;
+    private MyGridFragment fragment2;
+    private List<String> fileListForFragment;
+    private ArrayAdapter<String> adapterFragment;
+    private BitmapAdapter adapterBitmapFragment;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        //setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_fragment_main);
+
         nowDirTxtView = (TextView)findViewById(R.id.nowDir);
         fileListView = (ListView) findViewById(R.id.fileList);
 
-        registerForContextMenu(fileListView);
+        gridview = (GridView)findViewById(R.id.gridView);
 
-        fileListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        /*// レイアウトインフレーター使用
+        LayoutInflater factory = LayoutInflater.from(this);
+        // 他のレイアウトファイルを指定
+        View layInfView = factory.inflate(R.layout.fragment_listview, null);
+        listview = (ListView)layInfView.findViewById(R.id.listView);*/
+
+        //registerForContextMenu(fileListView);
+
+        /*fileListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 ListView listView = (ListView) parent;
@@ -69,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
                     showItem(item);
                 }
             }
-        });
+        });*/
 
         // パスを分解してStringの配列に格納
         String path = Environment.getExternalStorageDirectory().getPath();
@@ -90,7 +120,9 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, getDirName(), Toast.LENGTH_SHORT).show();
         nowDirTxtView.setText(getDirName());
 
-        setFiles2ListView();
+        //setFiles2ListView();
+        //setFiles2ListView_fragment();
+        setFiles2GridView_fragment();
     }
 
     /*
@@ -123,6 +155,76 @@ public class MainActivity extends AppCompatActivity {
             fileListView.setAdapter(adapter);
             fileListView.setEnabled(false);
         }
+    }
+
+    private void setFiles2ListView_fragment()
+    {
+        if (this.fragment1 == null) {
+            this.fragment1 = new MyListFragment();
+        }
+
+        ArrayList<String> fileListForFragment = new ArrayList<String>();
+        files = new File(getDirName()).listFiles();
+        if(files == null) return;
+        if(files.length > 0){
+            int f = 0;
+            int d = 0;
+            for(int i = 0; i < files.length; i++){
+                if(files[i].isFile()){
+                    f++;
+                }else d++;
+                fileListForFragment.add(files[i].getName());
+            }
+
+            Toast.makeText(this, Integer.toString(f) + " files\n" + Integer.toString(d) + " directories", Toast.LENGTH_SHORT).show();
+            adapterFragment = new ArrayAdapter<String>(this, android.R.layout.simple_expandable_list_item_1, fileListForFragment);
+        }
+        else
+        {
+            fileListForFragment.add("なんもないやで");
+            adapterFragment = new ArrayAdapter<String>(this, android.R.layout.simple_expandable_list_item_1, fileListForFragment);
+        }
+
+        FragmentManager fragmentManager = getFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        fragmentTransaction.add(R.id.fragment_container, this.fragment1);
+        fragmentTransaction.commit();
+    }
+    /*
+     *  現在のディレクトリ内のファイルとディレクトリを一覧にしてGridViewにセット
+     */
+    private void setFiles2GridView_fragment()
+    {
+        if (this.fragment2 == null) {
+            this.fragment2 = new MyGridFragment();
+        }
+
+        List<Bitmap> fileListForFragment = new ArrayList<Bitmap>();
+        files = new File(getDirName()).listFiles();
+        if(files == null) return;
+        if(files.length > 0){
+            int f = 0;
+            int d = 0;
+            for(int i = 0; i < files.length; i++){
+                if(files[i].isFile()){
+                    f++;
+                }else d++;
+                fileListForFragment.add(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
+            }
+
+            Toast.makeText(this, Integer.toString(f) + " files\n" + Integer.toString(d) + " directories", Toast.LENGTH_SHORT).show();
+            adapterBitmapFragment = new BitmapAdapter(getApplicationContext(), R.layout.fragment_imagelist, fileListForFragment);
+        }
+        else
+        {
+            fileListForFragment.add(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
+            adapterBitmapFragment = new BitmapAdapter(getApplicationContext(), R.layout.fragment_imagelist, fileListForFragment);
+        }
+
+        FragmentManager fragmentManager = getFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        fragmentTransaction.add(R.id.fragment_container, this.fragment2);
+        fragmentTransaction.commit();
     }
 
     /*
@@ -317,11 +419,59 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-
+        if (id == R.id.action_changeview) {
+            Toast.makeText(this, "ちぇんじびゅー", Toast.LENGTH_SHORT).show();
             return true;
         }
 
         return super.onOptionsItemSelected(item);
     }
+
+    class MyListFragment extends ListFragment {
+    /*@Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_listview, container, false);
+    }*/
+
+        @Override
+        public void onActivityCreated(Bundle savedInstanceState) {
+            super.onActivityCreated(savedInstanceState);
+            setListAdapter(adapterFragment);
+        }
+    }
+    class MyGridFragment extends Fragment {
+        @Override
+        public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+            View parent = inflater.inflate(R.layout.fragment_gridview, container, false);
+            GridView gv = (GridView) parent.findViewById(R.id.gridView);
+            gv.setAdapter(adapterBitmapFragment);
+            return parent;
+        }
+    }
+    public class BitmapAdapter extends ArrayAdapter<Bitmap> {
+
+        private int resourceId;
+
+        public BitmapAdapter(Context context, int resource, List<Bitmap> objects) {
+            super(context, resource, objects);
+            resourceId = resource;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+
+            if (convertView == null) {
+                LayoutInflater inflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+                convertView = inflater.inflate(resourceId, null);
+            }
+
+            ImageView view = (ImageView) convertView;
+            view.setImageBitmap(getItem(position));
+
+            return view;
+        }
+
+    }
 }
+
+
