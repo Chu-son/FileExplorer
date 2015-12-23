@@ -55,6 +55,8 @@ public class MainActivity extends AppCompatActivity {
     private ArrayAdapter<String> adapterFragment;
     private BitmapAdapter adapterBitmapFragment;
 
+    private boolean isListView = true;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -187,8 +189,9 @@ public class MainActivity extends AppCompatActivity {
 
         FragmentManager fragmentManager = getFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.add(R.id.fragment_container, this.fragment1);
+        fragmentTransaction.replace(R.id.fragment_container, this.fragment1);
         fragmentTransaction.commit();
+        isListView = true;
     }
     /*
      *  現在のディレクトリ内のファイルとディレクトリを一覧にしてGridViewにセット
@@ -223,8 +226,9 @@ public class MainActivity extends AppCompatActivity {
 
         FragmentManager fragmentManager = getFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.add(R.id.fragment_container, this.fragment2);
+        fragmentTransaction.replace(R.id.fragment_container, this.fragment2);
         fragmentTransaction.commit();
+        isListView = false;
     }
 
     /*
@@ -421,13 +425,26 @@ public class MainActivity extends AppCompatActivity {
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_changeview) {
             Toast.makeText(this, "ちぇんじびゅー", Toast.LENGTH_SHORT).show();
+            changeView();
             return true;
         }
 
         return super.onOptionsItemSelected(item);
     }
 
-    class MyListFragment extends ListFragment {
+    private void changeView()
+    {
+        if (isListView)
+        {
+            setFiles2GridView_fragment();
+        }
+        else
+        {
+            setFiles2ListView_fragment();
+        }
+    }
+
+    public class MyListFragment extends ListFragment {
     /*@Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_listview, container, false);
@@ -439,7 +456,7 @@ public class MainActivity extends AppCompatActivity {
             setListAdapter(adapterFragment);
         }
     }
-    class MyGridFragment extends Fragment {
+    public class MyGridFragment extends Fragment {
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
             View parent = inflater.inflate(R.layout.fragment_gridview, container, false);
