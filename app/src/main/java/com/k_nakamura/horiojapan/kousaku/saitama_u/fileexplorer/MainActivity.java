@@ -47,11 +47,13 @@ public class MainActivity extends AppCompatActivity {
     private String movieExtension[] = {".mp4",".avi"};
 
     private List<String> nowDirList = new ArrayList<String>();
+    private List<Integer> listPos = new ArrayList<Integer>();
     private int nowDirNum = 0;
 
     private MyListFragment fragment1;
     private MyGridFragment fragment2;
-    private List<String> fileListForFragment;
+    private ArrayList<String>  fileListForFragmentString;
+
     private ArrayAdapter<String> adapterFragment;
     private BitmapAdapter adapterBitmapFragment;
 
@@ -111,11 +113,13 @@ public class MainActivity extends AppCompatActivity {
         while((end = path.indexOf(searchWord, begin)) > -1)
         {
             nowDirList.add(path.substring(begin,end));
+            listPos.add(0);
             begin = end + 1;
             nowDirNum++;
         }
         if((begin = path.lastIndexOf(searchWord)) + 1 != path.length()) {
             nowDirList.add(path.substring(begin+1));
+            listPos.add(0);
             nowDirNum++;
         }
 
@@ -165,7 +169,7 @@ public class MainActivity extends AppCompatActivity {
             this.fragment1 = new MyListFragment();
         }
 
-        ArrayList<String> fileListForFragment = new ArrayList<String>();
+        fileListForFragmentString = new ArrayList<String>();
         files = new File(getDirName()).listFiles();
         if(files == null) return;
         if(files.length > 0){
@@ -175,16 +179,16 @@ public class MainActivity extends AppCompatActivity {
                 if(files[i].isFile()){
                     f++;
                 }else d++;
-                fileListForFragment.add(files[i].getName());
+                fileListForFragmentString.add(files[i].getName());
             }
 
             Toast.makeText(this, Integer.toString(f) + " files\n" + Integer.toString(d) + " directories", Toast.LENGTH_SHORT).show();
-            adapterFragment = new ArrayAdapter<String>(this, android.R.layout.simple_expandable_list_item_1, fileListForFragment);
+            adapterFragment = new ArrayAdapter<String>(this, android.R.layout.simple_expandable_list_item_1, fileListForFragmentString);
         }
         else
         {
-            fileListForFragment.add("なんもないやで");
-            adapterFragment = new ArrayAdapter<String>(this, android.R.layout.simple_expandable_list_item_1, fileListForFragment);
+            fileListForFragmentString.add("なんもないやで");
+            adapterFragment = new ArrayAdapter<String>(this, android.R.layout.simple_expandable_list_item_1, fileListForFragmentString);
         }
 
         FragmentManager fragmentManager = getFragmentManager();
@@ -192,6 +196,30 @@ public class MainActivity extends AppCompatActivity {
         fragmentTransaction.replace(R.id.fragment_container, this.fragment1);
         fragmentTransaction.commit();
         isListView = true;
+    }
+    private void refreshList(int pos)
+    {
+        fileListForFragmentString.clear();
+        files = new File(getDirName()).listFiles();
+        if(files == null) return;
+        if(files.length > 0){
+            int f = 0;
+            int d = 0;
+            for(int i = 0; i < files.length; i++){
+                if(files[i].isFile()){
+                    f++;
+                }else d++;
+                fileListForFragmentString.add(files[i].getName());
+            }
+
+            Toast.makeText(this, Integer.toString(f) + " files\n" + Integer.toString(d) + " directories", Toast.LENGTH_SHORT).show();
+        }
+        else
+        {
+            fileListForFragmentString.add("なんもないやで");
+        }
+        adapterFragment.notifyDataSetChanged();
+        fragment1.setSelection(pos);
     }
     /*
      *  現在のディレクトリ内のファイルとディレクトリを一覧にしてGridViewにセット
@@ -211,8 +239,12 @@ public class MainActivity extends AppCompatActivity {
             for(int i = 0; i < files.length; i++){
                 if(files[i].isFile()){
                     f++;
-                }else d++;
-                fileListForFragment.add(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
+                    fileListForFragment.add(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_file));
+                }else
+                {
+                    d++;
+                    fileListForFragment.add(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_folder));
+                }
             }
 
             Toast.makeText(this, Integer.toString(f) + " files\n" + Integer.toString(d) + " directories", Toast.LENGTH_SHORT).show();
@@ -239,7 +271,7 @@ public class MainActivity extends AppCompatActivity {
         if(nowDirNum == 1) return false;
         nowDirNum--;
         nowDirTxtView.setText(getDirName());
-        setFiles2ListView();
+        if(isListView)  refreshList(listPos.get(nowDirNum));
         return true;
     }
 
@@ -454,6 +486,32 @@ public class MainActivity extends AppCompatActivity {
         public void onActivityCreated(Bundle savedInstanceState) {
             super.onActivityCreated(savedInstanceState);
             setListAdapter(adapterFragment);
+        }
+
+        @Override
+        public void onListItemClick(ListView l, View v, int position, long id) {
+            ListView listView = l;
+            String item = (String) listView.getItemAtPosition(position);
+            if (files[position].isDirectory()) {
+                nowDirList.add(nowDirNum, item);
+                listPos.add(nowDirNum,l.getFirstVisiblePosition());
+                nowDirNum++;
+                nowDirTxtView.setText(getDirName());
+                refreshList(0);
+            } else if(isImage(files[position])) {
+                startShowImageIntent(item);
+            }
+            else if(isMusic(files[position]))
+            {
+                sendMusicIntent(files[position]);
+            }
+            else if(isMovie(files[position]))
+            {
+                sendMovieIntent(files[position]);
+            }
+            else{
+                showItem(item);
+            }
         }
     }
     public class MyGridFragment extends Fragment {
