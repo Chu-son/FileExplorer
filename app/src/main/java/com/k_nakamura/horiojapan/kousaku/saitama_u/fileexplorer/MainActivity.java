@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
     private MyGridFragment fragment2;
     private ArrayList<String>  fileListForFragmentString;
 
-    private ArrayAdapter<String> adapterFragment;
+    private MyListAdapter adapterFragment;
     private BitmapAdapter adapterBitmapFragment;
 
     private boolean isListView = true;
@@ -183,12 +183,14 @@ public class MainActivity extends AppCompatActivity {
             }
 
             Toast.makeText(this, Integer.toString(f) + " files\n" + Integer.toString(d) + " directories", Toast.LENGTH_SHORT).show();
-            adapterFragment = new ArrayAdapter<String>(this, android.R.layout.simple_expandable_list_item_1, fileListForFragmentString);
+            //adapterFragment = new ArrayAdapter<String>(this, android.R.layout.simple_expandable_list_item_1, fileListForFragmentString);
+            adapterFragment = new MyListAdapter(this, android.R.layout.simple_expandable_list_item_1, files);
         }
         else
         {
             fileListForFragmentString.add("なんもないやで");
-            adapterFragment = new ArrayAdapter<String>(this, android.R.layout.simple_expandable_list_item_1, fileListForFragmentString);
+            //adapterFragment = new ArrayAdapter<String>(this, android.R.layout.simple_expandable_list_item_1, fileListForFragmentString);
+            adapterFragment = new MyListAdapter(this, android.R.layout.simple_expandable_list_item_1, files);
         }
 
         FragmentManager fragmentManager = getFragmentManager();
@@ -218,7 +220,8 @@ public class MainActivity extends AppCompatActivity {
         {
             fileListForFragmentString.add("なんもないやで");
         }
-        adapterFragment.notifyDataSetChanged();
+        //adapterFragment.notifyDataSetChanged();
+        adapterFragment.resetFiles(files);
         fragment1.setSelection(pos);
     }
     /*
@@ -491,7 +494,8 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onListItemClick(ListView l, View v, int position, long id) {
             ListView listView = l;
-            String item = (String) listView.getItemAtPosition(position);
+            //String item = (String) listView.getItemAtPosition(position);
+            String item = adapterFragment.getFileName(position);
             if (files[position].isDirectory()) {
                 nowDirList.add(nowDirNum, item);
                 listPos.add(nowDirNum,l.getFirstVisiblePosition());
@@ -544,6 +548,58 @@ public class MainActivity extends AppCompatActivity {
             view.setImageBitmap(getItem(position));
 
             return view;
+        }
+
+    }
+
+    public class MyListAdapter extends ArrayAdapter<File>
+    {
+        File[] filesArray;
+        int resId;
+        LayoutInflater lInflater = null;
+
+        public MyListAdapter(Context context, int resource, File[] objects) {
+            super(context, resource, objects);
+            filesArray = objects;
+            resId = resource;
+            lInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        }
+
+        @Override
+        public int getCount() {
+            return filesArray.length;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ListView l = (ListView) parent;
+            Log.d("unko",Integer.toString(filesArray.length));
+            String fName = filesArray[position].getName();
+            Bitmap iconImage = null;
+            if(filesArray[position].isFile()){
+                iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_file);
+            }else
+            {
+                iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_folder);
+            }
+
+            convertView = lInflater.inflate(R.layout.fragment_listview,parent,false);
+
+            ((ImageView)convertView.findViewById(R.id.iconImageView)).setImageBitmap(iconImage);
+            ((TextView)convertView.findViewById(R.id.fileNameTextView)).setText(fName);
+
+            return convertView;
+        }
+
+        public String getFileName(int position )
+        {
+            return filesArray[position].getName();
+        }
+
+        public void resetFiles(File[] f)
+        {
+            filesArray = f;
+            this.notifyDataSetChanged();
         }
 
     }
