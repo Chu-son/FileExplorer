@@ -9,6 +9,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.net.Uri;
 import android.os.Environment;
 import android.support.v7.app.AlertDialog;
@@ -16,6 +18,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.ContextMenu;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -27,6 +30,7 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -55,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<String>  fileListForFragmentString;
 
     private MyListAdapter adapterFragment;
-    private BitmapAdapter adapterBitmapFragment;
+    private MyGridAdapter gridFragmentAdapter;
 
     private boolean isListView = true;
 
@@ -127,8 +131,8 @@ public class MainActivity extends AppCompatActivity {
         nowDirTxtView.setText(getDirName());
 
         //setFiles2ListView();
-        //setFiles2ListView_fragment();
-        setFiles2GridView_fragment();
+        setFiles2ListView_fragment();
+        //setFiles2GridView_fragment();
     }
 
     /*
@@ -251,12 +255,12 @@ public class MainActivity extends AppCompatActivity {
             }
 
             Toast.makeText(this, Integer.toString(f) + " files\n" + Integer.toString(d) + " directories", Toast.LENGTH_SHORT).show();
-            adapterBitmapFragment = new BitmapAdapter(getApplicationContext(), R.layout.fragment_imagelist, fileListForFragment);
+            gridFragmentAdapter = new MyGridAdapter(getApplicationContext(), R.layout.fragment_imagelist, files);
         }
         else
         {
             fileListForFragment.add(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
-            adapterBitmapFragment = new BitmapAdapter(getApplicationContext(), R.layout.fragment_imagelist, fileListForFragment);
+            gridFragmentAdapter = new MyGridAdapter(getApplicationContext(), R.layout.fragment_imagelist, files);
         }
 
         FragmentManager fragmentManager = getFragmentManager();
@@ -266,6 +270,31 @@ public class MainActivity extends AppCompatActivity {
         isListView = false;
     }
 
+    private void refreshGrid(int pos)
+    {
+        fileListForFragmentString.clear();
+        files = new File(getDirName()).listFiles();
+        if(files == null) return;
+        if(files.length > 0){
+            int f = 0;
+            int d = 0;
+            for(int i = 0; i < files.length; i++){
+                if(files[i].isFile()){
+                    f++;
+                }else d++;
+                fileListForFragmentString.add(files[i].getName());
+            }
+
+            Toast.makeText(this, Integer.toString(f) + " files\n" + Integer.toString(d) + " directories", Toast.LENGTH_SHORT).show();
+        }
+        else
+        {
+            fileListForFragmentString.add("なんもないやで");
+        }
+        //adapterFragment.notifyDataSetChanged();
+        gridFragmentAdapter.resetFiles(files);
+        //fragment2.setSelection(pos);
+    }
     /*
      *  １つ前のディレクトリに戻る
      */
@@ -275,6 +304,7 @@ public class MainActivity extends AppCompatActivity {
         nowDirNum--;
         nowDirTxtView.setText(getDirName());
         if(isListView)  refreshList(listPos.get(nowDirNum));
+        else refreshGrid(0);
         return true;
     }
 
@@ -523,17 +553,48 @@ public class MainActivity extends AppCompatActivity {
         public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
             View parent = inflater.inflate(R.layout.fragment_gridview, container, false);
             GridView gv = (GridView) parent.findViewById(R.id.gridView);
-            gv.setAdapter(adapterBitmapFragment);
+            gv.setHorizontalSpacing(5);
+            gv.setAdapter(gridFragmentAdapter);
+            gv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    GridView gridView = (GridView)parent;
+                    String item = gridFragmentAdapter.getFileName(position);
+                    if (files[position].isDirectory()) {
+                        nowDirList.add(nowDirNum, item);
+                        nowDirNum++;
+                        nowDirTxtView.setText(getDirName());
+                        refreshGrid(0);
+                    } else if(isImage(files[position])) {
+                        startShowImageIntent(item);
+                    }
+                    else if(isMusic(files[position]))
+                    {
+                        sendMusicIntent(files[position]);
+                    }
+                    else if(isMovie(files[position]))
+                    {
+                        sendMovieIntent(files[position]);
+                    }
+                    else{
+                        showItem(item);
+                    }
+
+                }
+            });
             return parent;
         }
-    }
-    public class BitmapAdapter extends ArrayAdapter<Bitmap> {
 
+    }
+    public class MyGridAdapter extends ArrayAdapter<File> {
+
+        private File[] filesArray;
         private int resourceId;
 
-        public BitmapAdapter(Context context, int resource, List<Bitmap> objects) {
+        public MyGridAdapter(Context context, int resource, File[] objects) {
             super(context, resource, objects);
             resourceId = resource;
+            filesArray = objects;
         }
 
         @Override
@@ -544,12 +605,45 @@ public class MainActivity extends AppCompatActivity {
                 convertView = inflater.inflate(resourceId, null);
             }
 
-            ImageView view = (ImageView) convertView;
-            view.setImageBitmap(getItem(position));
+            String fName = filesArray[position].getName();
+            Bitmap iconImage = null;
+            if(filesArray[position].isFile()){
+                iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_file);
+            }else
+            {
+                iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_folder);
+            }
+            ((ImageView)convertView.findViewById(R.id.iconImageView)).setImageBitmap(iconImage);
+            TextView text = (TextView) convertView.findViewById(R.id.fileNameTextView);
+            text.setTextColor(Color.BLACK);
+            float textSize = 12f;
+            text.setTextSize(textSize);
+            text.setGravity(Gravity.CENTER_HORIZONTAL);
+            text.setWidth((int) (iconImage.getWidth() * 1.5));
+            /*Paint p = new Paint();
+            p.setTextSize(textSize);
+            Paint.FontMetrics fm = p.getFontMetrics();
+            text.setHeight((int)(Math.abs(fm.top)+Math.abs(fm.descent)+0.5f));*/
+            text.setLines(2);
+            text.setText(fName);
 
-            return view;
+            return convertView;
+        }
+        public String getFileName(int position )
+        {
+            return filesArray[position].getName();
         }
 
+        @Override
+        public int getCount() {
+            return filesArray.length;
+        }
+
+        public void resetFiles(File[] f)
+        {
+            filesArray = f;
+            this.notifyDataSetChanged();
+        }
     }
 
     public class MyListAdapter extends ArrayAdapter<File>
@@ -573,7 +667,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             ListView l = (ListView) parent;
-            Log.d("unko",Integer.toString(filesArray.length));
             String fName = filesArray[position].getName();
             Bitmap iconImage = null;
             if(filesArray[position].isFile()){
@@ -586,7 +679,10 @@ public class MainActivity extends AppCompatActivity {
             convertView = lInflater.inflate(R.layout.fragment_listview,parent,false);
 
             ((ImageView)convertView.findViewById(R.id.iconImageView)).setImageBitmap(iconImage);
-            ((TextView)convertView.findViewById(R.id.fileNameTextView)).setText(fName);
+            TextView text = (TextView) convertView.findViewById(R.id.fileNameTextView);
+            text.setTextColor(Color.BLACK);
+            text.setTextSize(18);
+            text.setText(fName);
 
             return convertView;
         }
