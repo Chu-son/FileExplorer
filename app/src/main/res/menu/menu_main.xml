@@ -1,6 +1,13 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools" tools:context=".MainActivity">
+
     <item android:id="@+id/action_changeview" android:title="ChangeView"
         android:orderInCategory="100" app:showAsAction="ifRoom|withText" />
+
+    <item android:id="@+id/action_hiddenfile" android:title="隠しファイルを表示"
+        android:orderInCategory="100"  />
+    <item android:id="@+id/action_thumbnail_test" android:title="画像一覧"
+        android:orderInCategory="100"  />
+
 </menu>
