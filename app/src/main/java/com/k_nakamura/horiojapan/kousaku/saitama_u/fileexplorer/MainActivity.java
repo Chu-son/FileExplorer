@@ -11,6 +11,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.Environment;
 import android.support.v7.app.AlertDialog;
@@ -63,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isListView = true;
     private boolean displayHiddenFile = true;
+    private boolean displayThumbnails = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -502,6 +504,17 @@ public class MainActivity extends AppCompatActivity {
         if(isListView) refreshList(0);
         else refreshGrid(0);
     }
+    private void changeDisplayThumbnails(MenuItem item)
+    {
+        if(displayThumbnails)
+        {
+            item.setTitle("サムネイルを表示");
+        }
+        else item.setTitle("サムネイルを非表示");
+        displayThumbnails = !displayThumbnails;
+        if(isListView) refreshList(0);
+        else refreshGrid(0);
+    }
 
     /*
      *  オプションメニュー作成
@@ -533,8 +546,14 @@ public class MainActivity extends AppCompatActivity {
         }
         if(id == R.id.action_thumbnail_test)
         {
-            Toast.makeText(this, "サムネイルテスト", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "画像一覧テスト", Toast.LENGTH_SHORT).show();
             startShowThumbnailIntent();
+            return true;
+        }
+        if(id == R.id.action_thumbnail)
+        {
+            Toast.makeText(this, "サムネイル表示/非表示", Toast.LENGTH_SHORT).show();
+            changeDisplayThumbnails(item);
             return true;
         }
 
@@ -716,7 +735,29 @@ public class MainActivity extends AppCompatActivity {
             String fName = filesArray[position].getName();
             Bitmap iconImage;
             if(filesArray[position].isFile()){
-                iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_file);
+                if(displayThumbnails) {
+                    if(isImage(filesArray[position]))
+                    {
+                        BitmapFactory.Options options = new BitmapFactory.Options();
+                        options.inJustDecodeBounds = true;
+                        BitmapFactory.decodeFile(getDirName() + fName,options);
+                        int scaleW = options.outWidth/70 + 1;
+                        int scaleH = options.outHeight/70 + 1;
+                        int scale = Math.max(scaleW, scaleH);
+                        options.inJustDecodeBounds = false;
+                        options.inSampleSize = scale;
+                        iconImage = BitmapFactory.decodeFile(getDirName() + fName,options);
+                        //iconImage =Bitmap.createScaledBitmap(iconImage,70,70,false);
+                    }
+                    else
+                    {
+                        iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_file);
+                    }
+                }
+                else
+                {
+                    iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_file);
+                }
             }else
             {
                 iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_folder);
