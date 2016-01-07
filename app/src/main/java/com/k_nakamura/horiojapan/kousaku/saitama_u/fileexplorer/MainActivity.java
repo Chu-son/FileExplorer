@@ -4,6 +4,7 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.app.ListFragment;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -13,7 +14,9 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -39,6 +42,9 @@ import android.widget.Toast;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
     private ListView fileListView;
@@ -738,7 +744,7 @@ public class MainActivity extends AppCompatActivity {
                 if(displayThumbnails) {
                     if(isImage(filesArray[position]))
                     {
-                        BitmapFactory.Options options = new BitmapFactory.Options();
+                        /*BitmapFactory.Options options = new BitmapFactory.Options();
                         options.inJustDecodeBounds = true;
                         BitmapFactory.decodeFile(getDirName() + fName,options);
                         int scaleW = options.outWidth/70 + 1;
@@ -746,8 +752,11 @@ public class MainActivity extends AppCompatActivity {
                         int scale = Math.max(scaleW, scaleH);
                         options.inJustDecodeBounds = false;
                         options.inSampleSize = scale;
-                        iconImage = BitmapFactory.decodeFile(getDirName() + fName,options);
+                        iconImage = BitmapFactory.decodeFile(getDirName() + fName,options);*/
                         //iconImage =Bitmap.createScaledBitmap(iconImage,70,70,false);
+                        iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_file);
+                        Log.d("unko",Integer.toString(iconImage.getHeight())+":"+Integer.toString(iconImage.getWidth()));
+                        iconImage = ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(getDirName() + fName), iconImage.getWidth(), iconImage.getHeight());
                     }
                     else
                     {
@@ -793,6 +802,41 @@ public class MainActivity extends AppCompatActivity {
             this.notifyDataSetChanged();
         }
 
+    }
+
+    class DownloadTask extends AsyncTask<String, Bitmap, Bitmap> {
+        ImageView mImageView;
+        String mTag;
+        long mId;
+
+        public DownloadTask(ImageView imageView, long id) {
+            mImageView = imageView;
+            //以前の画像が残っているため、ImageViewの表示内容を適当に初期化
+            mImageView.setImageResource(android.R.drawable.alert_light_frame);
+            mTag = (String) imageView.getTag();
+            mId = id;
+        }
+
+        @Override
+        protected Bitmap doInBackground(String... urls) {
+            ContentResolver cr = getContentResolver();
+            // 画像IDに対応するサムネイル画像のBitmapを取得
+            return MediaStore.Images.Thumbnails.getThumbnail(
+                    cr, mId, MediaStore.Images.Thumbnails.MICRO_KIND, null);
+        }
+
+        @Override
+        protected void onPostExecute(Bitmap result) {
+            // 非同期処理中にListViewをスクロールさせていくと、
+            // 設定先ImageViewの対象画像が別なものに設定される場合がある。
+            // そのため、非同期処理したの画像 と 設定先ImageViewが現時点で対象としている画像の識別子を比較。
+            // 一致しているならば、ImageViewに取得したサムネイル画像をSetする。
+            if (mTag.equals(mImageView.getTag())) {
+                if (result != null) {
+                    mImageView.setImageBitmap(result);
+                }
+            }
+        }
     }
 }
 
