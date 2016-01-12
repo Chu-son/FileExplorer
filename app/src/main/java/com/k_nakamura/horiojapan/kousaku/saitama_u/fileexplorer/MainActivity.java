@@ -13,6 +13,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Environment;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -733,12 +734,15 @@ public class MainActivity extends AppCompatActivity {
         public View getView(int position, View convertView, ViewGroup parent) {
             ListView l = (ListView) parent;
             String fName = filesArray[position].getName();
+            convertView = lInflater.inflate(R.layout.fragment_listview,parent,false);
+
+            ImageView icon = (ImageView) convertView.findViewById(R.id.iconImageView);
             Bitmap iconImage;
             if(filesArray[position].isFile()){
                 if(displayThumbnails) {
                     if(isImage(filesArray[position]))
                     {
-                        BitmapFactory.Options options = new BitmapFactory.Options();
+                        /*BitmapFactory.Options options = new BitmapFactory.Options();
                         options.inJustDecodeBounds = true;
                         BitmapFactory.decodeFile(getDirName() + fName,options);
                         int scaleW = options.outWidth/70 + 1;
@@ -746,8 +750,11 @@ public class MainActivity extends AppCompatActivity {
                         int scale = Math.max(scaleW, scaleH);
                         options.inJustDecodeBounds = false;
                         options.inSampleSize = scale;
-                        iconImage = BitmapFactory.decodeFile(getDirName() + fName,options);
+                        iconImage = BitmapFactory.decodeFile(getDirName() + fName,options);*/
                         //iconImage =Bitmap.createScaledBitmap(iconImage,70,70,false);
+                        iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_file);
+                        LoadThumbnails lt = new LoadThumbnails(icon,getDirName() + fName);
+                        lt.execute();
                     }
                     else
                     {
@@ -763,9 +770,6 @@ public class MainActivity extends AppCompatActivity {
                 iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_folder);
             }
 
-            convertView = lInflater.inflate(R.layout.fragment_listview,parent,false);
-
-            ImageView icon = (ImageView) convertView.findViewById(R.id.iconImageView);
             icon.setImageBitmap(iconImage);
 
             TextView text = (TextView) convertView.findViewById(R.id.fileNameTextView);
@@ -793,6 +797,37 @@ public class MainActivity extends AppCompatActivity {
             this.notifyDataSetChanged();
         }
 
+    }
+    public class LoadThumbnails extends AsyncTask<Void , Void , Bitmap>
+    {
+        ImageView iv;
+        String fName;
+        BitmapFactory.Options options ;
+
+        public LoadThumbnails(ImageView iv,String fname)
+        {
+            super();
+            this.iv = iv;
+            this.fName = fname;
+        }
+
+        @Override
+        protected Bitmap doInBackground(Void... params) {
+            options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(fName,options);
+            int scaleW = options.outWidth/70 + 1;
+            int scaleH = options.outHeight/70 + 1;
+            int scale = Math.max(scaleW, scaleH);
+            options.inJustDecodeBounds = false;
+            options.inSampleSize = scale;
+            return BitmapFactory.decodeFile(fName,options);
+        }
+
+        @Override
+        protected void onPostExecute(Bitmap bitmap) {
+            iv.setImageBitmap(bitmap);
+        }
     }
 }
 
