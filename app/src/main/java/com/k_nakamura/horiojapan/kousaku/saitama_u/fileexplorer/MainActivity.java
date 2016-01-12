@@ -13,7 +13,6 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Environment;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -734,9 +733,6 @@ public class MainActivity extends AppCompatActivity {
         public View getView(int position, View convertView, ViewGroup parent) {
             ListView l = (ListView) parent;
             String fName = filesArray[position].getName();
-            convertView = lInflater.inflate(R.layout.fragment_listview,parent,false);
-
-            ImageView icon = (ImageView) convertView.findViewById(R.id.iconImageView);
             Bitmap iconImage;
             if(filesArray[position].isFile()){
                 if(displayThumbnails) {
@@ -755,6 +751,10 @@ public class MainActivity extends AppCompatActivity {
                         iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_file);
                         LoadThumbnails lt = new LoadThumbnails(icon,getDirName() + fName);
                         lt.execute();
+                        
+                        //iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_file);
+                        //Log.d("unko",Integer.toString(iconImage.getHeight())+":"+Integer.toString(iconImage.getWidth()));
+                        //iconImage = ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(getDirName() + fName), iconImage.getWidth(), iconImage.getHeight());
                     }
                     else
                     {
