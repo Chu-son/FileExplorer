@@ -19,6 +19,7 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.LruCache;
 import android.view.ContextMenu;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -743,7 +744,7 @@ public class MainActivity extends AppCompatActivity {
                     if(isImage(filesArray[position]))
                     {
                         iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_file);
-                        LoadThumbnails lt = new LoadThumbnails(icon,getDirName() + fName);
+                        LoadThumbnails lt = new LoadThumbnails(getContext(),icon,getDirName() + fName);
                         lt.execute();
                     }
                     else
@@ -787,40 +788,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
-    public class LoadThumbnails extends AsyncTask<Void , Void , Bitmap>
-    {
-        ImageView iv;
-        String fName;
-        BitmapFactory.Options options ;
 
-        public LoadThumbnails(ImageView iv,String fname)
-        {
-            super();
-            this.iv = iv;
-            this.fName = fname;
-        }
-
-        @Override
-        protected Bitmap doInBackground(Void... params) {
-            /*options = new BitmapFactory.Options();
-            options.inJustDecodeBounds = true;
-            BitmapFactory.decodeFile(fName,options);
-            int scaleW = options.outWidth/70 + 1;
-            int scaleH = options.outHeight/70 + 1;
-            int scale = Math.max(scaleW, scaleH);
-            options.inJustDecodeBounds = false;
-            options.inSampleSize = scale;
-            return BitmapFactory.decodeFile(fName,options);*/
-
-            Bitmap iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_file);
-            return ThumbnailUtils.extractThumbnail(BitmapFactory.decodeFile(fName), iconImage.getWidth(), iconImage.getHeight());
-        }
-
-        @Override
-        protected void onPostExecute(Bitmap bitmap) {
-            iv.setImageBitmap(bitmap);
-        }
-    }
 }
 
 
