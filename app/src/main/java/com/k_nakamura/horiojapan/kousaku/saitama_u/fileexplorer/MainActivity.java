@@ -1,6 +1,7 @@
 package com.k_nakamura.horiojapan.kousaku.saitama_u.fileexplorer;
 
 import android.app.Fragment;
+import android.app.FragmentBreadCrumbs;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.app.ListFragment;
@@ -14,6 +15,7 @@ import android.graphics.Paint;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Debug;
 import android.os.Environment;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -28,8 +30,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
@@ -44,8 +48,6 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private ListView fileListView;
-    private GridView gridview;
-    private ListView listview;
     private TextView nowDirTxtView;
     private File[] files;
 
@@ -59,25 +61,24 @@ public class MainActivity extends AppCompatActivity {
 
     private MyListFragment fragment1;
     private MyGridFragment fragment2;
+    private MyAbsListFragment myFragment;
     private ArrayList<String>  fileListForFragmentString;
 
     private MyListAdapter adapterFragment;
     private MyGridAdapter gridFragmentAdapter;
+    private MyAbsListViewAdapter myAdapter;
 
     private boolean isListView = true;
     private boolean displayHiddenFile = true;
-    private boolean displayThumbnails = false;
+    private boolean displayThumbnails = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        //setContentView(R.layout.activity_main);
         setContentView(R.layout.activity_fragment_main);
 
         nowDirTxtView = (TextView)findViewById(R.id.nowDir);
         fileListView = (ListView) findViewById(R.id.fileList);
-
-        gridview = (GridView)findViewById(R.id.gridView);
 
         /*// レイアウトインフレーター使用
         LayoutInflater factory = LayoutInflater.from(this);
@@ -117,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
         // パスを分解してStringの配列に格納
         String path = Environment.getExternalStorageDirectory().getPath();
         String searchWord = "/";
-        int begin = 1;
+        int begin = 1; //はじめの/はとばす
         int end;
         while((end = path.indexOf(searchWord, begin)) > -1)
         {
@@ -135,9 +136,9 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, getDirName(), Toast.LENGTH_SHORT).show();
         nowDirTxtView.setText(getDirName());
 
-        //setFiles2ListView();
         setFiles2ListView_fragment();
         //setFiles2GridView_fragment();
+        //setFiles2AbsListView_fragment();
     }
 
     /*
@@ -193,13 +194,15 @@ public class MainActivity extends AppCompatActivity {
 
             Toast.makeText(this, Integer.toString(f) + " files\n" + Integer.toString(d) + " directories", Toast.LENGTH_SHORT).show();
             //adapterFragment = new ArrayAdapter<String>(this, android.R.layout.simple_expandable_list_item_1, fileListForFragmentString);
-            adapterFragment = new MyListAdapter(this, android.R.layout.simple_expandable_list_item_1, files);
+            //adapterFragment = new MyListAdapter(this, android.R.layout.simple_expandable_list_item_1, files);
+            myAdapter = new MyAbsListViewAdapter(this, R.layout.fragment_imagelist, files);
         }
         else
         {
             fileListForFragmentString.add("なんもないやで");
             //adapterFragment = new ArrayAdapter<String>(this, android.R.layout.simple_expandable_list_item_1, fileListForFragmentString);
-            adapterFragment = new MyListAdapter(this, android.R.layout.simple_expandable_list_item_1, files);
+            //adapterFragment = new MyListAdapter(this, android.R.layout.simple_expandable_list_item_1, files);
+            myAdapter = new MyAbsListViewAdapter(this, R.layout.fragment_imagelist, files);
         }
         if(!displayHiddenFile) files = removeHiddenFiles(files);
 
@@ -211,6 +214,10 @@ public class MainActivity extends AppCompatActivity {
     }
     private void refreshList(int pos)
     {
+        if (this.fragment1 == null) {
+            this.fragment1 = new MyListFragment();
+        }
+
         fileListForFragmentString.clear();
         files = new File(getDirName()).listFiles();
         if(files == null) return;
@@ -233,8 +240,48 @@ public class MainActivity extends AppCompatActivity {
         if(!displayHiddenFile) files = removeHiddenFiles(files);
 
         //adapterFragment.notifyDataSetChanged();
-        adapterFragment.resetFiles(files);
-        fragment1.setSelection(pos);
+        myAdapter.resetFiles(files);
+        //fragment1.setSelection(pos);
+    }
+    private void setFiles2AbsListView_fragment()
+    {
+        if (this.myFragment == null) {
+            this.myFragment = new MyAbsListFragment(this);
+        }
+
+        fileListForFragmentString = new ArrayList<String>();
+        files = new File(getDirName()).listFiles();
+        if(files == null) return;
+        if(files.length > 0){
+            int f = 0;
+            int d = 0;
+            for(int i = 0; i < files.length; i++){
+                if(files[i].isFile()){
+                    f++;
+                }else d++;
+                fileListForFragmentString.add(files[i].getName());
+            }
+
+            Toast.makeText(this, Integer.toString(f) + " files\n" + Integer.toString(d) + " directories", Toast.LENGTH_SHORT).show();
+            myAdapter = new MyAbsListViewAdapter(this, R.layout.fragment_imagelist, files);
+        }
+        else
+        {
+            fileListForFragmentString.add("なんもないやで");
+            myAdapter = new MyAbsListViewAdapter(this, R.layout.fragment_imagelist, files);
+        }
+        if(!displayHiddenFile) files = removeHiddenFiles(files);
+
+        FragmentManager fragmentManager = getFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        fragmentTransaction.replace(R.id.fragment_container, this.myFragment);
+        fragmentTransaction.commit();
+        isListView = true;
+    }
+    private void refreshAbsList(int pos)
+    {
+        if(isListView)  refreshList(pos);
+        else refreshGrid(0);
     }
     /*
      *  現在のディレクトリ内のファイルとディレクトリを一覧にしてGridViewにセット
@@ -263,12 +310,14 @@ public class MainActivity extends AppCompatActivity {
             }
 
             Toast.makeText(this, Integer.toString(f) + " files\n" + Integer.toString(d) + " directories", Toast.LENGTH_SHORT).show();
-            gridFragmentAdapter = new MyGridAdapter(getApplicationContext(), R.layout.fragment_imagelist, files);
+            //gridFragmentAdapter = new MyGridAdapter(getApplicationContext(), R.layout.fragment_imagelist, files);
+            myAdapter = new MyAbsListViewAdapter(this, R.layout.fragment_imagelist, files);
         }
         else
         {
             fileListForFragment.add(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
-            gridFragmentAdapter = new MyGridAdapter(getApplicationContext(), R.layout.fragment_imagelist, files);
+            //gridFragmentAdapter = new MyGridAdapter(getApplicationContext(), R.layout.fragment_imagelist, files);
+            myAdapter = new MyAbsListViewAdapter(this, R.layout.fragment_imagelist, files);
         }
         if(!displayHiddenFile) files = removeHiddenFiles(files);
 
@@ -281,6 +330,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void refreshGrid(int pos)
     {
+        if (this.fragment2 == null) {
+            this.fragment2 = new MyGridFragment();
+        }
+
         fileListForFragmentString.clear();
         files = new File(getDirName()).listFiles();
         if(files == null) return;
@@ -303,9 +356,11 @@ public class MainActivity extends AppCompatActivity {
         if(!displayHiddenFile) files = removeHiddenFiles(files);
 
         //adapterFragment.notifyDataSetChanged();
-        gridFragmentAdapter.resetFiles(files);
+        //gridFragmentAdapter.resetFiles(files);
         //fragment2.setSelection(pos);
+        myAdapter.resetFiles(files);
     }
+
     /*
      *  １つ前のディレクトリに戻る
      */
@@ -314,8 +369,8 @@ public class MainActivity extends AppCompatActivity {
         if(nowDirNum == 1) return false;
         nowDirNum--;
         nowDirTxtView.setText(getDirName());
-        if(isListView)  refreshList(listPos.get(nowDirNum));
-        else refreshGrid(0);
+        refreshAbsList(listPos.get(nowDirNum-1));
+
         return true;
     }
 
@@ -503,8 +558,7 @@ public class MainActivity extends AppCompatActivity {
         }
         else item.setTitle("隠しファイルを非表示");
         displayHiddenFile = !displayHiddenFile;
-        if(isListView) refreshList(0);
-        else refreshGrid(0);
+        refreshAbsList(0);
     }
     private void changeDisplayThumbnails(MenuItem item)
     {
@@ -514,8 +568,7 @@ public class MainActivity extends AppCompatActivity {
         }
         else item.setTitle("サムネイルを非表示");
         displayThumbnails = !displayThumbnails;
-        if(isListView) refreshList(0);
-        else refreshGrid(0);
+        refreshAbsList(0);
     }
 
     /*
@@ -565,32 +618,30 @@ public class MainActivity extends AppCompatActivity {
     private void changeView()
     {
         if (isListView)
-        {
             setFiles2GridView_fragment();
-        }
-        else
-        {
-            setFiles2ListView_fragment();
-        }
+        else setFiles2ListView_fragment();
+        /*myFragment.changeView();
+        FragmentManager fragmentManager = getFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        fragmentTransaction.remove(this.myFragment);
+        fragmentTransaction.replace(R.id.fragment_container, myFragment);
+        fragmentTransaction.commit();*/
+        Log.d("test","1");
     }
 
     public class MyListFragment extends ListFragment {
-    /*@Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_listview, container, false);
-    }*/
-
         @Override
         public void onActivityCreated(Bundle savedInstanceState) {
             super.onActivityCreated(savedInstanceState);
-            setListAdapter(adapterFragment);
+            //setListAdapter(adapterFragment);
+            setListAdapter(myAdapter.listMode());
         }
 
         @Override
         public void onListItemClick(ListView l, View v, int position, long id) {
             ListView listView = l;
             //String item = (String) listView.getItemAtPosition(position);
-            String item = adapterFragment.getFileName(position);
+            String item = myAdapter.getFileName(position);
             if (files[position].isDirectory()) {
                 nowDirList.add(nowDirNum, item);
                 listPos.add(nowDirNum,l.getFirstVisiblePosition());
@@ -619,12 +670,13 @@ public class MainActivity extends AppCompatActivity {
             View parent = inflater.inflate(R.layout.fragment_gridview, container, false);
             GridView gv = (GridView) parent.findViewById(R.id.gridView);
             gv.setHorizontalSpacing(5);
-            gv.setAdapter(gridFragmentAdapter);
-            gv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            //gv.setAdapter(gridFragmentAdapter);
+            gv.setAdapter(myAdapter.gridMode());
+
+            ((AbsListView)gv).setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    GridView gridView = (GridView) parent;
-                    String item = gridFragmentAdapter.getFileName(position);
+                    String item = myAdapter.getFileName(position);
                     if (files[position].isDirectory()) {
                         nowDirList.add(nowDirNum, item);
                         nowDirNum++;
@@ -642,10 +694,96 @@ public class MainActivity extends AppCompatActivity {
 
                 }
             });
+
             return parent;
         }
 
     }
+
+    public class MyAbsListFragment extends Fragment
+    {
+        private boolean isListView;
+        private Context context;
+        private int listPosition;
+
+        public MyAbsListFragment(Context context,boolean isListView)
+        {
+            this.isListView = isListView;
+            this.context = context;
+            this.listPosition = 0;
+        }
+
+        public MyAbsListFragment(Context context)
+        {
+            this(context,true);
+        }
+
+        @Override
+        public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+            super.onCreateView(inflater, container, savedInstanceState);
+
+            //View parent = inflater.inflate(R.layout.fragment_myabslistbase, container, false);
+            LinearLayout parent = new LinearLayout(context);
+            parent.setBackgroundColor(Color.WHITE);
+
+            AbsListView absList;
+
+            if(isListView) {
+                ListView lv = new ListView(context);
+                lv.setAdapter(myAdapter.listMode());
+                lv.setSelection(listPosition);
+
+                parent.addView(lv);
+                absList = lv;
+                Log.d("test","3");
+            }
+            else
+            {
+                GridView gv = new GridView(context);
+                gv.setNumColumns(4);
+                gv.setHorizontalSpacing(5);
+                gv.setAdapter(myAdapter.gridMode());
+
+                parent.addView(gv);
+                absList = gv;
+                Log.d("test","4");
+            }
+            Log.d("test","5");
+
+            absList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    String item = myAdapter.getFileName(position);
+                    if (files[position].isDirectory()) {
+                        nowDirList.add(nowDirNum, item);
+                        nowDirNum++;
+                        nowDirTxtView.setText(getDirName());
+                        refreshGrid(0);
+                    } else if (isImage(files[position])) {
+                        startShowImageIntent(item);
+                    } else if (isMusic(files[position])) {
+                        sendMusicIntent(files[position]);
+                    } else if (isMovie(files[position])) {
+                        sendMovieIntent(files[position]);
+                    } else {
+                        showItem(item);
+                    }
+
+                }
+            });
+
+            return parent;
+        }
+
+        public void changeView()
+        {
+            isListView = !isListView;
+            myAdapter.notifyDataSetChanged();
+            Log.d("test","2");
+        }
+
+    }
+
     public class MyGridAdapter extends ArrayAdapter<File> {
 
         private File[] filesArray;
@@ -662,6 +800,10 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             convertView = inflater.inflate(resourceId, null);
+
+            LinearLayout ll = (LinearLayout)convertView.findViewById(R.id.linear);
+            ll.setOrientation(LinearLayout.VERTICAL);
+            ll.setGravity(Gravity.CENTER_HORIZONTAL);
 
             String fName = filesArray[position].getName();
             Bitmap iconImage = null;
@@ -735,7 +877,16 @@ public class MainActivity extends AppCompatActivity {
         public View getView(int position, View convertView, ViewGroup parent) {
             ListView l = (ListView) parent;
             String fName = filesArray[position].getName();
-            convertView = lInflater.inflate(R.layout.fragment_listview,parent,false);
+            convertView = lInflater.inflate(R.layout.fragment_imagelist,parent,false);
+
+            LinearLayout ll = (LinearLayout)convertView.findViewById(R.id.linear);
+            ll.setOrientation(LinearLayout.HORIZONTAL);
+            ll.setGravity(Gravity.CENTER_VERTICAL);
+            ll.setLayoutParams(
+                    new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+            );
 
             ImageView icon = (ImageView) convertView.findViewById(R.id.iconImageView);
             Bitmap iconImage;
@@ -787,6 +938,134 @@ public class MainActivity extends AppCompatActivity {
             this.notifyDataSetChanged();
         }
 
+    }
+
+    public class MyAbsListViewAdapter extends BaseAdapter
+    {
+        private File[] filesArray;
+        private int resourceId;
+        private LayoutInflater inflater;
+        private Context context;
+        private boolean isListView;
+
+        public MyAbsListViewAdapter(Context context, int resourceId, File[] objects) {
+            super();
+            filesArray = objects;
+            this.resourceId = resourceId;
+            this.context = context;
+            inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        }
+
+        @Override
+        public int getCount() {
+            return filesArray.length;
+        }
+
+        @Override
+        public Object getItem(int position) {
+            return filesArray[position];
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            convertView = inflater.inflate(resourceId,null);
+            String fName = filesArray[position].getName();
+
+            ImageView icon = (ImageView) convertView.findViewById(R.id.iconImageView);
+            Bitmap iconImage;
+            if(filesArray[position].isFile()){
+                if(displayThumbnails) {
+                    if(isImage(filesArray[position]))
+                    {
+                        iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_file);
+                        LoadThumbnails lt = new LoadThumbnails(context,icon,getDirName() + fName);
+                        lt.execute();
+                    }
+                    else
+                    {
+                        iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_file);
+                    }
+                }
+                else
+                {
+                    iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_file);
+                }
+            }else
+            {
+                iconImage = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_folder);
+            }
+            icon.setImageBitmap(iconImage);
+
+            LinearLayout ll = (LinearLayout)convertView.findViewById(R.id.linear);
+            TextView text = (TextView) convertView.findViewById(R.id.fileNameTextView);
+            text.setTextColor(Color.BLACK);
+            text.setText(fName);
+            if(isListView) {
+                ll.setOrientation(LinearLayout.HORIZONTAL);
+                ll.setGravity(Gravity.CENTER_VERTICAL);
+                ll.setLayoutParams(
+                        new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                );
+
+                text.setTextSize(18);
+
+                Log.d("test","List");
+            }
+            else
+            {
+                ll.setOrientation(LinearLayout.VERTICAL);
+                ll.setGravity(Gravity.CENTER_HORIZONTAL);
+                ll.setLayoutParams(
+                        new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                        )
+                );
+
+                float textSize = 12f;
+                text.setTextSize(textSize);
+                text.setGravity(Gravity.CENTER_HORIZONTAL);
+                text.setWidth((int) (iconImage.getWidth() * 1.5));
+                text.setLines(2);
+
+                Log.d("test","Grid");
+            }
+
+            if(displayHiddenFile&&filesArray[position].isHidden())
+            {
+                icon.setColorFilter(0xbbffffff);
+                text.setTextColor(Color.GRAY);
+            }
+
+            return convertView;
+        }
+
+        public String getFileName(int position )
+        {
+            return filesArray[position].getName();
+        }
+
+        public void resetFiles(File[] f) {
+            filesArray = f;
+            this.notifyDataSetChanged();
+        }
+
+        public MyAbsListViewAdapter gridMode()
+        {
+            isListView = false;
+            return this;
+        }
+        public MyAbsListViewAdapter listMode()
+        {
+            isListView = true;
+            return this;
+        }
     }
 
 }
