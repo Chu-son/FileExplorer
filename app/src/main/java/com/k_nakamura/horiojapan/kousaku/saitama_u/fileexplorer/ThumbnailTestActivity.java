@@ -14,6 +14,7 @@ import android.net.Uri;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -122,6 +123,7 @@ public class ThumbnailTestActivity extends AppCompatActivity {
         if (id == R.id.action_settings) {
             return true;
         }
+        Log.d("unko", "unko");
 
         return super.onOptionsItemSelected(item);
     }
