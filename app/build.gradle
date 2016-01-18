@@ -22,4 +22,14 @@ android {
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     compile 'com.android.support:appcompat-v7:23.1.1'
+
+    // Include the sdk as a dependency
+    compile('com.onedrive.sdk:onedrive-sdk-android:1.1.0')
+
+    // Include the gson dependency
+    compile 'com.google.code.gson:gson:2.3.1'
+
+    // Include supported authentication methods for your application
+    compile 'com.microsoft.services.msa:msa-auth:0.8.4'
+    compile 'com.microsoft.aad:adal:1.1.7'
 }

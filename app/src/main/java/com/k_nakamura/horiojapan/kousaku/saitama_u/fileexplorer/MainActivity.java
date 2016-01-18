@@ -337,6 +337,11 @@ public class MainActivity extends AppCompatActivity {
 
             return true;
         }
+        if(id == R.id.action_browseonedrive)
+        {
+            Intent intent = new Intent(this,BrowseOneDrive.class);
+            startActivity(intent);
+        }
 
         return super.onOptionsItemSelected(item);
     }
@@ -370,9 +375,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
-
-
-
 }
 
 
